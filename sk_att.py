@@ -298,18 +298,3 @@ class DSTANet(nn.Module):
 
         # return x
         return x
-
-
-
-# if __name__ == '__main__':
-#     config = [[64, 64, 16, 1], [64, 64, 16, 1],
-#               [64, 128, 32, 2], [128, 128, 32, 1],
-#               [128, 256, 64, 2], [256, 256, 64, 1],
-#               [256, 256, 64, 1], [256, 256, 64, 1],
-#               ]
-#     net = DSTANet(config=config)  # .cuda()
-#     # ske = torch.rand([4, 2, 95, 70, 1])  # .cuda()
-#     ske = torch.rand([2, 95, 70, 2])  # .cuda()
-#     # print(net(ske).shape)
-#     a = net(ske)
-#     print(a.shape)
