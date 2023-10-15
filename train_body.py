@@ -8,14 +8,14 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms, utils
 from my_dataset import MyDataSet
 from torch.utils.data import Dataset, DataLoader
-from vit_model import vit_base_patch16_224_in21k as create_model  # 导入预训练模型
+from vit_model import vit_base_patch16_224_in21k as create_model  
 from utils import read_split_data, train_one_epoch, evaluate
 import pandas as pd
 import xlwt
 import xlrd
 from skimage import transform
 import numpy as np
-import matplotlib.pyplot as plt  # 新增
+import matplotlib.pyplot as plt 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 plt.ion()
 
@@ -26,10 +26,9 @@ warnings.filterwarnings("ignore")
 
 # torch.backends.cudnn.benchmark=True
 
-book = xlwt.Workbook(encoding='utf-8')  #创建Workbook，相当于创建Excel
-# 创建sheet，Sheet1为表的名字，cell_overwrite_ok为是否覆盖单元格
+book = xlwt.Workbook(encoding='utf-8') 
+
 sheet2 = book.add_sheet(u'Train_data', cell_overwrite_ok=True)
-# 向表中添加数据
 sheet2.write(0, 0, 'epoch')
 sheet2.write(0, 1, 'Train_Loss')
 sheet2.write(0, 2, 'Train_Acc')
@@ -50,10 +49,8 @@ def read_csv(file_path):
     return data
 
 
-# 三个数据变换类的定义
 class Rescale(object):
     """Rescale the image in a sample to a given size.
-        对图片和控制点的坐标进行尺度变换。
     Args:
         output_size (tuple or int): Desired output size. If tuple, output is
             matched to output_size. If int, smaller of image edges is matched
@@ -86,7 +83,6 @@ class Rescale(object):
 
 class RandomCrop(object):
     """Crop randomly the image in a sample.
-        图片进行规定尺寸的随机裁剪。控制点的坐标相应平移
     Args:
         output_size (tuple or int): Desired output size. If int, square crop
             is made.
@@ -114,7 +110,6 @@ class RandomCrop(object):
         # scaler = {}
         # feats = [face_point, point, lh_point, rh_point]
         # for x in feats:
-        #     # 获得对应属性下的值并堆叠
         #     all_data = np.vstack(x)
         #     scaler[x] = MinMaxScaler()
         #     scaler[x].fit(all_data)
@@ -130,7 +125,6 @@ class RandomCrop(object):
 
 class Center(object):
     """Crop randomly the image in a sample.
-        图片进行规定尺寸的随机裁剪。控制点的坐标相应平移
     Args:
         output_size (tuple or int): Desired output size. If int, square crop
             is made.
@@ -161,7 +155,6 @@ class Center(object):
 
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors.
-        numpy数组到tensor的变化，另外还有维度的变化。
     """
     def __call__(self, sample):
         image, face_point, point, lh_point, rh_point, label = sample['frame'], sample['face_point'], sample['point'], \
@@ -192,16 +185,6 @@ def main(args):
     train_videos_path, train_labels, train_points_path, val_videos_path, val_labels, val_points_path = \
         read_split_data(args.data_path)
 
-    # 数据预处理
-    # data_transform = {
-    #     "train": transforms.Compose([transforms.RandomResizedCrop(224),
-    #                                  transforms.RandomHorizontalFlip(),
-    #                                  transforms.ToTensor(),
-    #                                  transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])]),
-    #     "val": transforms.Compose([transforms.Resize(256),
-    #                                transforms.CenterCrop(224),
-    #                                transforms.ToTensor(),
-    #                                transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])}
 
     transformed_train_dataset = MyDataSet(videos_path=train_videos_path,
                                           videos_class=train_labels,
@@ -221,18 +204,6 @@ def main(args):
                                                        ToTensor()
                                                    ]))
 
-# -==================================================
-    # 实例化训练数据集
-    # train_dataset = MyDataSet(images_path=train_images_path,
-    #                           images_class=train_label,
-    #                           points_path=train_points_path,
-    #                           transform=data_transform["train"])
-    #
-    # # 实例化验证数据集
-    # val_dataset = MyDataSet(images_path=val_images_path,
-    #                         images_class=val_label,
-    #                         points_path=val_points_path,
-    #                         transform=data_transform["val"])
 
     batch_size = args.batch_size
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers
@@ -253,8 +224,6 @@ def main(args):
                                 collate_fn=transformed_val_dataset.collate_fn)
 
     # ======================================== Model Vit =========================================
-    # 初始化模型（分类类别个数，logits设为否，这里如果设为是，就会只训练这里，其他的被冻结）
-    # 分别为不同模型导入参数，不冻结权重
     model_vit = create_model(num_classes=11, has_logits=False).to(device)
 
     if args.weights == "":
@@ -264,7 +233,6 @@ def main(args):
         """
         TODO 复制空间block参数给时间
         """
-        # 删除不需要的权重
         del_keys = ['head.weight', 'head.bias']
         # del_model_keys = model_vit.load_state_dict(weights_dict, strict=False)[1]
         for k in del_keys:
@@ -285,8 +253,7 @@ def main(args):
             else:
                 para.requires_grad_(False)
                 print("freeze {}".format(name))
-    # ======================================= Model Dnn=======================================================
-    # model_dnn = points_to_dnn(args).to(device)
+                
     # ================================================================================================
     pg = [p for p in model_vit.parameters() if p.requires_grad]
     optimizer = optim.SGD(pg, lr=args.lr, momentum=0.9, weight_decay=5E-5)
@@ -303,7 +270,6 @@ def main(args):
         sheet2.write(epoch + 1, 5, str(optimizer.state_dict()['param_groups'][0]['lr']))
 
         # train
-        # model_1,model_2,不冻结权重，依次获取值，
         train_loss, train_acc = train_one_epoch(model=model_vit,
                                                 optimizer=optimizer,
                                                 data_loader=train_dataloader,
@@ -324,11 +290,11 @@ def main(args):
         sheet2.write(epoch + 1, 3, str(val_loss))
         sheet2.write(epoch + 1, 4, str(val_acc))
 
-        # time = "%s" % datetime.now()  # 获取当前时间
+        # time = "%s" % datetime.now()  
         # step = "Step[%d]" % epoch
         # list = [time, step, train_loss, train_acc, val_loss, val_acc]
         # data = pd.DataFrame([list])
-        # data.to_csv('./val_acc.csv', mode='a', header=False, index=False)  # mode设为a,就可以向csv文件追加数据了
+        # data.to_csv('./val_acc.csv', mode='a', header=False, index=False) 
 
         tags = ["train_loss", "train_acc", "val_loss", "val_acc", "learning_rate"]
         tb_writer.add_scalar(tags[0], train_loss, epoch)
@@ -339,13 +305,10 @@ def main(args):
 
         if val_acc > best_acc:
             best_acc = val_acc
-            # torch.save(model_vit.state_dict(), "./weights/best_model2.pth")  vit 训练权重
-            torch.save(model_vit.state_dict(), "./weights/best_model_FABO_Cro_enh.pth")  # dnn训练权重
-            # torch.save(model.state_dict(), "./weights/model-{}.pth".format(epoch))
+            torch.save(model_vit.state_dict(), "./weights/best_model_FABO_Cro_enh.pth") 
 
         sheet2.write(1, 6, str(best_acc))
-        book.save('./Train_FABO_Cro_enh_data.xlsx')  # vit
-        # book.save('./Train_dnn_data.xlsx')   # dnn
+        book.save('./Train_FABO_Cro_enh_data.xlsx') 
         print("The Best Acc = : {:.4f}".format(best_acc))
 
         torch.save(model_vit.state_dict(), "./weights/train_lest_FABO_Cro_rnh.pth")
@@ -372,12 +335,10 @@ if __name__ == '__main__':
     # 数据集所在根目录
     # CAER-S    D:/datasets/CAER-S
     # CAER      D:datasets/CAER
-    # 这里default只需要指向解压后的数据集目录就可以，名字太长可以修改
     # parser.add_argument('--data_path', type=str, default="/home/ubuntu/nas/FB-GER/FABO/")
     parser.add_argument('--data_path', type=str, default="/home/ubuntu/nas/FB-GER/FABO/")
     parser.add_argument('--model_name', default='', help='create model name')
 
-    # todo 预训练权重路径，如果不想载入就设置为空字符
     # 这里default要指向预训练权重路径
     parser.add_argument('--weights', type=str, default='./weights/best_model_FABO_Cro_att.pth', help='initial weights path')
 
