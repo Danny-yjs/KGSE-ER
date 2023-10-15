@@ -27,7 +27,7 @@ class MyDataSet(Dataset):
             image_path = os.path.join(self.videos_path[item], f)
             img = Image.open(image_path)
             image = cv2.imread(image_path)
-            # RGB为彩色图片，L为灰度图片
+            
             if img.mode != 'RGB':
                 raise ValueError("image: {} isn't RGB mode.".format(self.videos_path[item]))
 
@@ -38,7 +38,6 @@ class MyDataSet(Dataset):
             # # point_path = os.path.join(self.points_path[item], frame_points)
 
             with open(point_path) as p:
-                # 把一个json文件返回一个python对象
                 json_data = json.load(p)
 
             keypoints = np.asarray(json_data['people'][0]['pose_keypoints_2d'], dtype=np.float32).reshape((-1, 3))
@@ -99,7 +98,7 @@ class MyDataSet(Dataset):
     def collate_fn(batch):
         # 官方实现的default_collate可以参考
         # https://github.com/pytorch/pytorch/blob/67b7e751e6b5931a9f45274653f4f653a4e6cdf6/torch/utils/data/_utils/collate.py
-        img, f_point, b_point, l_point, r_point, y = tuple(zip(*batch))    # 将数据与标签压缩
+        img, f_point, b_point, l_point, r_point, y = tuple(zip(*batch))  
 
         img = pad_sequence(img, batch_first=True)
         f_point = pad_sequence(f_point, batch_first=True)
