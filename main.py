@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms, utils
 from my_dataset import MyDataSet
 from torch.utils.data import Dataset, DataLoader
-from vit_model import vit_base_patch16_224_in21k as create_model  
+from model import vit_base_patch16_224_in21k as create_model  
 from utils import read_split_data, train_one_epoch, evaluate
 import pandas as pd
 import xlwt
