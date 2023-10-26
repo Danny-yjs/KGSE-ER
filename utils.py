@@ -12,50 +12,8 @@ import matplotlib.pyplot as plt
 os.environ['CUDA_VISIBLE_DEVICES']='0'
 
 def pad_sequence(sequences, batch_first=False, padding_value=0, max_len = 95):
-    r"""Pad a list of variable length Tensors with zero
-
-    ``pad_sequence`` stacks a list of Tensors along a new dimension,
-    and pads them to equal length. For example, if the input is list of
-    sequences with size ``L x *`` and if batch_first is False, and ``T x B x *``
-    otherwise.
-
-    `B` is batch size. It is equal to the number of elements in ``sequences``.
-    `T` is length of the longest sequence.
-    `L` is length of the sequence.
-    `*` is any number of trailing dimensions, including none.
-
-    Example:
-        >>> from torch.nn.utils.rnn import pad_sequence
-        >>> a = torch.ones(25, 300)
-        >>> b = torch.ones(22, 300)
-        >>> c = torch.ones(15, 300)
-        >>> pad_sequence([a, b, c]).size()
-        torch.Size([25, 3, 300])
-
-    Note:
-        This function returns a Tensor of size ``T x B x *`` or ``B x T x *`` where `T` is the
-            length of the longest sequence.
-        Function assumes trailing dimensions and type of all the Tensors
-            in sequences are same.
-
-    Arguments:
-        sequences (list[Tensor]): list of variable length sequences.
-        batch_first (bool, optional): output will be in ``B x T x *`` if True, or in
-            ``T x B x *`` otherwise
-        padding_value (float, optional): value for padded elements. Default: 0.
-
-    Returns:
-        Tensor of size ``T x B x *`` if batch_first is False
-        Tensor of size ``B x T x *`` otherwise
-    """
-
-    # assuming trailing dimensions and type of all the Tensors
-    # in sequences are same and fetching those from sequences[0]
-    # sequences = sequences.unsqueeze(1)# 在第二维度加1，代表batch
     max_size = sequences[0].size()
-    # trailing_dims = max_size[1:]
     trailing_dims = max_size[1:]
-    # max_len = max([s.size(0) for s in sequences])
     if batch_first:
         out_dims = (len(sequences), max_len) + trailing_dims
     else:
@@ -64,7 +22,6 @@ def pad_sequence(sequences, batch_first=False, padding_value=0, max_len = 95):
     out_tensor = sequences[0].data.new(*out_dims).fill_(padding_value)
     for i, tensor in enumerate(sequences):
         length = tensor.size(0)
-        # use index notation to prevent duplicate references to the tensor
         if batch_first:
             out_tensor[i, :length, ...] = tensor
         else:
@@ -77,7 +34,6 @@ def get_videos():
     video_path = []  
     points_path = []
     label = [] 
-    # for cla in os.listdir(path) 
    
     path = "/__"
     path_json = "/__"
@@ -100,7 +56,7 @@ def get_videos():
             
             video = []
             points = []
-            for i in os.listdir(cla_path):   # 24_1
+            for i in os.listdir(cla_path):  
                 if os.listdir(os.path.join(cla_path, i)):
                     video.append(os.path.join(cla_path, i))
                     points.append(os.path.join(cla_path_points, i))
@@ -120,7 +76,6 @@ def get_videos():
 
 
 def read_split_data(root: str, val_rate: float = 0.2014):
-    random.seed(0)  
     assert os.path.exists(root), "dataset root: {} does not exist.".format(root)
 
     video_path, label, points_path, every_class_num = get_videos()
@@ -155,7 +110,7 @@ def plot_data_loader_image(data_loader):
     batch_size = data_loader.batch_size
     plot_num = min(batch_size, 4)
 
-    json_path = './class_indices.json'
+    json_path = './_'
     assert os.path.exists(json_path), json_path + " does not exist."
     json_file = open(json_path, 'r')
     class_indices = json.load(json_file)
