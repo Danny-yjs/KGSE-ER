@@ -10,7 +10,6 @@ from torch.nn import utils as nn_utils
 
 
 class MyDataSet(Dataset):
-    """自定义数据集"""
     def __init__(self, videos_path: list, videos_class: list, points_path: list, transform=None):
         self.videos_path = videos_path
         self.videos_class = videos_class
@@ -31,11 +30,8 @@ class MyDataSet(Dataset):
             if img.mode != 'RGB':
                 raise ValueError("image: {} isn't RGB mode.".format(self.videos_path[item]))
 
-            # # json_data = self.points_path[item]
             frame_points = os.path.splitext(f)[0] + ".json"
-            # # 保证图片与骨骼点对应
             point_path = os.path.join(self.points_path[item], frame_points)
-            # # point_path = os.path.join(self.points_path[item], frame_points)
 
             with open(point_path) as p:
                 json_data = json.load(p)
@@ -44,7 +40,7 @@ class MyDataSet(Dataset):
             face_keypoints = np.asarray(json_data['people'][0]['face_keypoints_2d'], dtype=np.float32).reshape((-1, 3))
             hand_left_keypoints = np.asarray(json_data['people'][0]['hand_left_keypoints_2d'], dtype=np.float32).reshape((-1, 3))
             hand_right_keypoints = np.asarray(json_data['people'][0]['hand_right_keypoints_2d'], dtype=np.float32).reshape((-1, 3))
-            # ======================================标准化坐标点============================================
+
             normalize_point_x = keypoints[8, 0]
             normalize_point_y = keypoints[8, 1]
             keypoints[:, 0] -= normalize_point_x
@@ -61,12 +57,6 @@ class MyDataSet(Dataset):
             hand_right_keypoints[:, 0] = hand_right_keypoints[:, 0] - hand_right_keypoints[0, 0]
             hand_right_keypoints[:, 1] = hand_right_keypoints[:, 1] - hand_right_keypoints[0, 1]
 
-            # keypoints = np.reshape(keypoints, (-1))
-            # face_keypoints = np.reshape(face_keypoints, (-1))
-            # hand_left_keypoints = np.reshape(hand_left_keypoints, (-1))
-            # hand_right_keypoints = np.reshape(hand_right_keypoints, (-1))
-            # ======================================标准化坐标点============================================
-            # label = self.images_class[item]
             label = self.videos_class[item]
 
             sample = {'frame': image, 'face_point': face_keypoints, 'point': keypoints,
