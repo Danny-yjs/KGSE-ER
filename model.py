@@ -12,9 +12,9 @@ def drop_path(x, drop_prob: float = 0., training: bool = False):
     if drop_prob == 0. or not training:
         return x
     keep_prob = 1 - drop_prob
-    shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
+    shape = (x.shape[0],) + (1,) * (x.ndim - 1) 
     random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
-    random_tensor.floor_()  # binarize
+    random_tensor.floor_()  
     output = x.div(keep_prob) * random_tensor
     return output
 
@@ -38,7 +38,7 @@ class PatchEmbed(nn.Module):
         patch_size = (patch_size, patch_size)
         self.img_size = img_size
         self.patch_size = patch_size
-        # grid_size 14
+
         self.grid_size = (img_size[0] // patch_size[0], img_size[1] // patch_size[1])
         self.num_patches = self.grid_size[0] * self.grid_size[1]
 
@@ -78,7 +78,7 @@ class Attention(nn.Module):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
 
-        q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
+        q, k, v = qkv[0], qkv[1], qkv[2]  
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
         attn = attn.softmax(dim=-1)
@@ -150,7 +150,7 @@ class VisionTransformer(nn.Module):
                  act_layer=None):
         super(VisionTransformer, self).__init__()
         self.num_classes = num_classes
-        self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
+        self.num_features = self.embed_dim = embed_dim 
         self.num_tokens = 2 if distilled else 1
         norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
         act_layer = act_layer or nn.GELU
@@ -168,7 +168,7 @@ class VisionTransformer(nn.Module):
         self.pos_embed_time_N = nn.Parameter(torch.zeros(1, 9, embed_dim))
         self.pos_drop = nn.Dropout(p=drop_ratio)
 
-        dpr = [x.item() for x in torch.linspace(0, drop_path_ratio, depth)]  # stochastic depth decay rule
+        dpr = [x.item() for x in torch.linspace(0, drop_path_ratio, depth)] 
         self.blocks = nn.Sequential(*[
             Block(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
                   drop_ratio=drop_ratio, attn_drop_ratio=attn_drop_ratio, drop_path_ratio=dpr[i],
@@ -180,7 +180,7 @@ class VisionTransformer(nn.Module):
             Block(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
                   drop_ratio=drop_ratio, attn_drop_ratio=attn_drop_ratio, drop_path_ratio=dpr[i],
                   norm_layer=norm_layer, act_layer=act_layer)
-            for i in range(2)     # TODO 可修改此处参数
+            for i in range(2)    
         ])
         self.norm = norm_layer(embed_dim)
         if representation_size and not distilled:
@@ -206,7 +206,7 @@ class VisionTransformer(nn.Module):
         if self.dist_token is not None:
             nn.init.trunc_normal_(self.dist_token, std=0.02)
 
-        self.soft = nn.Softmax(dim=1)   # softmax
+        self.soft = nn.Softmax(dim=1)  
 
         self.N = n_frame
         self.confidence_threshold = 0.1
@@ -215,8 +215,8 @@ class VisionTransformer(nn.Module):
           [128, 256, 64, 2], [256, 256, 64, 1],
           [256, 256, 64, 1], [256, 256, 64, 1],
           ]
-        self.DSTA_net = DSTANet(config=config)#  .cuda()
-        self.DSTA_net_body = DSTANet(config=config, num_point=67)# .cuda()
+        self.DSTA_net = DSTANet(config=config)  
+        self.DSTA_net_body = DSTANet(config=config, num_point=67)
 
         self.cro_att_i = CrossAttention(dim=768, num_heads=4)
         self.cro_att_p = CrossAttention(dim=768, num_heads=4)
@@ -225,12 +225,11 @@ class VisionTransformer(nn.Module):
         self.cro_body_384 = nn.Linear(768, 384)
 
     def forward_features(self, x):
-        # x = rearrange(x, 'b 1 c w h -> (b 1) c w h')
-        x = self.patch_embed(x)  # [B, 196, 768]
+        x = self.patch_embed(x)  
 
         cls_token = self.cls_token.expand(x.shape[0], -1, -1)
         if self.dist_token is None:
-            x = torch.cat((cls_token, x), dim=1)  # [B, 197, 768]
+            x = torch.cat((cls_token, x), dim=1)  
         else:
             x = torch.cat((cls_token, self.dist_token.expand(x.shape[0], -1, -1), x), dim=1)
 
@@ -245,10 +244,8 @@ class VisionTransformer(nn.Module):
     def tim_transformer(self, x):
         cls_token = self.cls_token_time.expand(x.shape[0], -1, -1)
         if self.dist_token is None:
-            # [B, 1, 768]和[B, T, 768]--> [B, T+1, 768]
-            # print(cls_token.device)
-            # print(x.device)
-            x = torch.cat((cls_token, x), dim=1)  # [B, T+1, 768]
+          
+            x = torch.cat((cls_token, x), dim=1)  
         else:
             x = torch.cat((cls_token, self.dist_token.expand(x.shape[0], -1, -1), x), dim=1)
 
@@ -261,7 +258,6 @@ class VisionTransformer(nn.Module):
             return x[:, 0], x[:, 1]
 
     def find_apex(self, x):
-        # x->(batch, 7)
         x = rearrange(self.head(x), 'b 1 c-> b (1 c)')
         x = self.soft(x)
 
@@ -274,13 +270,10 @@ class VisionTransformer(nn.Module):
         alph = top_one - sec_one
         beta = alph/(top_one-min_score)
         gama = alph * beta
-        # for b in range(x.shape[0]):
-        #     if torch.max(top_two, dim=1)[1][b] == 4:
-        #         gama[b] = gama[b]/2
+
         return gama, x
 
     def tim_transformer_n(self, x):
-        # [B, N, D] -> [B, first N frames, embed_dim]
         cls_token = self.cls_token.expand(x.shape[0], -1, -1)
 
         x = self.pos_drop(x + self.pos_embed)
@@ -288,8 +281,7 @@ class VisionTransformer(nn.Module):
         x = self.norm(x)
 
         if self.dist_token is None:
-            # [B, 1, 768]和[B, 196, 768]--> [B, 197, 768]
-            x = torch.cat((cls_token, x), dim=1)  # [B, 197, 768]
+            x = torch.cat((cls_token, x), dim=1)  
         else:
             x = torch.cat((cls_token, self.dist_token.expand(x.shape[0], -1, -1), x), dim=1)
 
@@ -303,13 +295,13 @@ class VisionTransformer(nn.Module):
         return x
 
     def enhance(self, gama_fa, cro_fea_face, fa_soft):
-        ga_fa = torch.stack(gama_fa, dim=1)  # (b, 95)
-        frames_face = torch.stack(cro_fea_face, dim=1)  # (b, 95, 1, 768)
-        frames_face = rearrange(self.cro_face_384(frames_face), 'b t 1 c-> b t (1 c)')  # (b, 95, 1, 384)
-        so_fa = torch.stack(fa_soft, dim=1)  # (b, 95, 11)
+        ga_fa = torch.stack(gama_fa, dim=1) 
+        frames_face = torch.stack(cro_fea_face, dim=1)  
+        frames_face = rearrange(self.cro_face_384(frames_face), 'b t 1 c-> b t (1 c)') 
+        so_fa = torch.stack(fa_soft, dim=1)  
 
         top_face_N = torch.topk(ga_fa, 8)
-        top_ga_fa_ch = torch.unsqueeze(ga_fa, 2)  # (b, 95, 1)
+        top_ga_fa_ch = torch.unsqueeze(ga_fa, 2)  
         top_enhance_face = torch.zeros([top_ga_fa_ch.shape[0], 8, 384])
         top_face_so = torch.zeros([top_ga_fa_ch.shape[0], 8, 11])
 
@@ -325,28 +317,24 @@ class VisionTransformer(nn.Module):
         return top_enhance_face, top_face_so
 
     def forward(self, frames, faces, bodies, l_hand, r_hand):
-        # images:(b, T, 3, 224, 224)
         x_feature = []
         cro_fea_face, cro_fea_body = [], []
         gama_fa, gama_bo = [], []
         fa_soft, bo_soft = [], []
-        # points_list = torch.chunk(faces, faces.size(1), dim=1)
+       
         batch = frames.shape[0]
-        # ================images=======================
+       
         frames = rearrange(frames, 'b t c w h -> (b t) c w h')
-        x = self.forward_features(frames)   # (b*95, 768)
-        # =================points_face=================      # Tensor(b, 95, 70, 3)
-        face_x = faces[:, :, :, 0].clone()  # (b,95, 70)
+        x = self.forward_features(frames)  
+
+        face_x = faces[:, :, :, 0].clone()
         face_y = faces[:, :, :, 1].clone()
         face_confidences = faces[:, :, :, 2].clone()
         t = 0.1
         face_confidences = (face_confidences > t).float() * 1  
-        # make all joints with threshold lower than
-        # features_positions :Tensor(b, 95, 70, 3)
         face = torch.stack(
-            (face_x * face_confidences, face_y * face_confidences), dim=3)  # (b, 95, 70, 2)
-        face_feature = self.DSTA_net(face)    # (b, 256)
-        # ****************points_body********************
+            (face_x * face_confidences, face_y * face_confidences), dim=3)  
+        face_feature = self.DSTA_net(face)  
         body = torch.cat((bodies, l_hand, r_hand), dim=2)
         body = body.view(body.size(0), body.size(1), -1, 3)
         body_x = body[:, :, :, 0].clone()
@@ -357,19 +345,16 @@ class VisionTransformer(nn.Module):
         body = torch.stack(
             (body_x * body_confidences, body_y * body_confidences), dim=3)
         
-        body_points = self.DSTA_net_body(body)  # (b, 256)
-        # ===========================================================
+        body_points = self.DSTA_net_body(body) 
         x = rearrange(x, '(b t) c -> b t c', b=batch) 
         frame_list = torch.chunk(x, x.size(1), dim=1)
         for i in range(0, len(x[1])):
             frame = frame_list[i]
-            # =================face分支==========================
-            cross_att_up = self.cro_att_i.forward(frame, face_feature)   # (b, 1, 768)
+            cross_att_up = self.cro_att_i.forward(frame, face_feature)  
             gama_face, face_soft = self.find_apex(cross_att_up)
             fa_soft.append(face_soft)
-            gama_fa.append(gama_face)   # 各帧表情伽马
-            cro_fea_face.append(cross_att_up)   # 各帧表情特征
-            # =================body分支==========================
+            gama_fa.append(gama_face) 
+            cro_fea_face.append(cross_att_up)  
             cross_att_down = self.cro_att_p.forward(frame, body_points)
             gama_body, body_soft = self.find_apex(cross_att_down)
             bo_soft.append(body_soft)
@@ -440,27 +425,24 @@ class CrossAttention(nn.Module):
         self.drop = nn.Dropout(p=drop)
 
     def forward(self, x, y):
-        # x: (b, 768)
-        # y: (b, 256)
-        # x = x.unsqueeze(1)
         y = y.unsqueeze(2)
         y = self.conv(y)
         y = rearrange(y, 'b c 1 -> b 1 c')
-        Bx, Nx, Cx = x.shape     # (b, 1, 768)
-        By, Ny, Cy = y.shape     # (b, 1, 768)
+        Bx, Nx, Cx = x.shape  
+        By, Ny, Cy = y.shape   
 
-        q = self.q(x).reshape(Bx, Nx, 1, self.num_heads, Cx // self.num_heads).permute(2, 0, 3, 1, 4)  # (b, 95, 1, 4, 196)
-        kv = self.kv(y).reshape(By, Ny, 2, self.num_heads, Cy // self.num_heads).permute(2, 0, 3, 1, 4)   # (b, 95, 2, 4, 196)
-        # [batch_size, num_heads, num_patches + 1, embed_dim_per_head]
+        q = self.q(x).reshape(Bx, Nx, 1, self.num_heads, Cx // self.num_heads).permute(2, 0, 3, 1, 4)
+        kv = self.kv(y).reshape(By, Ny, 2, self.num_heads, Cy // self.num_heads).permute(2, 0, 3, 1, 4)  
+      
 
-        q, k, v = q[0], kv[0], kv[1]  # (b, 4, 1, 196) # make torchscript happy (cannot use tensor as tuple)
+        q, k, v = q[0], kv[0], kv[1]  
         kv = (q @ k.transpose(-2, -1)) * self.scale
 
         kv = kv.softmax(dim=-1)
         kv = self.attn_drop(kv)
         kv = (kv @ v).transpose(1, 2).reshape(By, Nx, Cy)
         kv = self.proj(kv)
-        kv = self.proj_drop(kv)   # (b, 1, 768)
+        kv = self.proj_drop(kv)  
         cro = x + kv
 
         return cro
